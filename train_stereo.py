@@ -149,6 +149,7 @@ def train(args):
     model.cuda()
     model.train()
     model.module.freeze_bn() # We keep BatchNorm frozen
+    model.module.freeze_extractor() # freeze feature extractor and context extractor
 
     validation_frequency = 10000
 
