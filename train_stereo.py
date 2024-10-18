@@ -196,10 +196,6 @@ def train(args):
 
             total_steps += 1
 
-            # print GPU memory usage at the end of each iteration
-            print(f"Memory allocated: {torch.cuda.memory_allocated()} bytes")
-            print(f"Memory reserved: {torch.cuda.memory_reserved()} bytes")
-
             if total_steps > args.num_steps:
                 should_keep_training = False
                 break
