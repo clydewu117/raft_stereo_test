@@ -131,7 +131,7 @@ class Logger:
 
 def train(args):
 
-    model = nn.DataParallel(RAFTStereo(args))
+    model = nn.DataParallel(RAFTStereo(args), device_ids=[0, 1])  # specify only 2 GPUs used during training
     print("Parameter Count: %d" % count_parameters(model))
 
     train_loader = datasets.fetch_dataloader(args)
@@ -186,7 +186,8 @@ def train(args):
                 logging.info(f"Saving file {save_path.absolute()}")
                 torch.save(model.state_dict(), save_path)
 
-                results = validate_things(model.module, iters=args.valid_iters)
+                # performance on middlebury
+                results = validate_middlebury(model.module, iters=args.valid_iters, split='H')
 
                 logger.write_dict(results)
 
