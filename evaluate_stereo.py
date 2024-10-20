@@ -173,6 +173,8 @@ def validate_middlebury(model, iters=32, split='F', mixed_prec=False):
         val = (valid_gt.reshape(-1) >= -0.5) & (flow_gt[0].reshape(-1) > -1000)
 
         out = (epe_flattened > 2.0)
+        print(f"EPE shape: {epe.shape}")
+        print(f"EPE_flattened shape: {epe_flattened.shape}")
         image_out = out[val].float().mean().item()
         image_epe = epe_flattened[val].mean().item()
         logging.info(f"Middlebury Iter {val_id+1} out of {len(val_dataset)}. EPE {round(image_epe,4)} D1 {round(image_out,4)}")
