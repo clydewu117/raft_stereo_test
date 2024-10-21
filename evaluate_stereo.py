@@ -153,7 +153,8 @@ def validate_middlebury(model, iters=32, split='F', mixed_prec=False):
     aug_params = {}
     val_dataset = datasets.Middlebury(aug_params, split=split)
 
-    out_list, epe_list = [], []
+    epe_by_iter = [[] for _ in range(iters)]
+    d1_by_iter = [[] for _ in range(iters)]
     for val_id in range(len(val_dataset)):
         (imageL_file, _, _), image1, image2, flow_gt, valid_gt = val_dataset[val_id]
         image1 = image1[None].cuda()
@@ -163,33 +164,31 @@ def validate_middlebury(model, iters=32, split='F', mixed_prec=False):
         image1, image2 = padder.pad(image1, image2)
 
         with autocast(enabled=mixed_prec):
-            _, flow_pr = model(image1, image2, iters=iters, test_mode=True)
-        flow_pr = padder.unpad(flow_pr).cpu().squeeze(0)
+            flow_predictions = model(image1, image2, iters=iters, test_mode=False)
 
-        assert flow_pr.shape == flow_gt.shape, (flow_pr.shape, flow_gt.shape)
-        epe = torch.sum((flow_pr - flow_gt)**2, dim=0).sqrt()
+        for i, flow_pr in enumerate(flow_predictions):  # iterate over flow_predictions (1 per iteration)
+            assert flow_pr.shape == flow_gt.shape, (flow_pr.shape, flow_gt.shape)
+            flow_pr = padder.unpad(flow_pr).cpu().squeeze(0)
+            epe = torch.sum((flow_pr - flow_gt) ** 2, dim=0).sqrt()  # calculate EPE
 
-        epe_flattened = epe.flatten()
-        val = (valid_gt.reshape(-1) >= -0.5) & (flow_gt[0].reshape(-1) > -1000)
+            epe_flattened = epe.flatten()
+            val = (valid_gt.reshape(-1) >= -0.5) & (flow_gt[0].reshape(-1) > -1000)
 
-        out = (epe_flattened > 2.0)
-        print(f"flow_pr shape: {flow_pr.shape}")
-        print(f"EPE shape: {epe.shape}")
-        print(f"EPE_flattened shape: {epe_flattened.shape}")
-        image_out = out[val].float().mean().item()
-        image_epe = epe_flattened[val].mean().item()
-        logging.info(f"Middlebury Iter {val_id+1} out of {len(val_dataset)}. EPE {round(image_epe,4)} D1 {round(image_out,4)}")
-        epe_list.append(image_epe)
-        out_list.append(image_out)
+            out = (epe_flattened > 2.0)
+            image_out = out[val].float().mean().item()  # D1 for the current iteration
+            image_epe = epe_flattened[val].mean().item()  # EPE for the current iteration
 
-    epe_list = np.array(epe_list)
-    out_list = np.array(out_list)
+            # Append results to the lists
+            epe_by_iter[i].append(image_epe)
+            d1_by_iter[i].append(image_out)
 
-    epe = np.mean(epe_list)
-    d1 = 100 * np.mean(out_list)
+            logging.info(
+                f"Middlebury Iter {val_id + 1}, Iteration {i + 1}/{iters} - EPE: {round(image_epe, 4)} D1: {round(image_out, 4)}")
 
-    print(f"Validation Middlebury{split}: EPE {epe}, D1 {d1}")
-    return {f'middlebury{split}-epe': epe, f'middlebury{split}-d1': d1}
+        avg_epe_per_iter = [np.mean(epe_list) for epe_list in epe_by_iter]
+        avg_d1_per_iter = [100 * np.mean(d1_list) for d1_list in d1_by_iter]
+
+    return
 
 
 if __name__ == '__main__':
