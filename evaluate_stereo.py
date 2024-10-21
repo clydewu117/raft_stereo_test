@@ -182,11 +182,12 @@ def validate_middlebury(model, iters=32, split='F', mixed_prec=False):
             epe_by_iter[i].append(image_epe)
             d1_by_iter[i].append(image_out)
 
-            logging.info(
-                f"Middlebury Iter {val_id + 1}, Iteration {i + 1}/{iters} - EPE: {round(image_epe, 4)} D1: {round(image_out, 4)}")
+            logging.info(f"Middlebury Iter {val_id + 1}, Iteration {i + 1}/{iters} - EPE: {round(image_epe, 4)} D1: {round(image_out, 4)}")
 
-        avg_epe_per_iter = [np.mean(epe_list) for epe_list in epe_by_iter]
-        avg_d1_per_iter = [100 * np.mean(d1_list) for d1_list in d1_by_iter]
+        avg_epe_by_iter = [np.mean(epe_list) for epe_list in epe_by_iter]
+        avg_d1_by_iter = [100 * np.mean(d1_list) for d1_list in d1_by_iter]
+
+        print(f"Validation Middlebury{split}: EPE shape {avg_epe_by_iter}, D1 shape {avg_d1_by_iter}")
 
     return
 
