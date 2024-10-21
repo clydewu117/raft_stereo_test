@@ -153,9 +153,11 @@ def validate_middlebury(model, iters=32, split='F', mixed_prec=False):
     aug_params = {}
     val_dataset = datasets.Middlebury(aug_params, split=split)
 
-    epe_by_iter = [[] for _ in range(iters)]
-    d1_by_iter = [[] for _ in range(iters)]
+    epe_by_iter_2d = []
+    d1_by_iter_2d = []
     for val_id in range(len(val_dataset)):
+        epe_by_iter = [[] for _ in range(iters)]
+        d1_by_iter = [[] for _ in range(iters)]
         (imageL_file, _, _), image1, image2, flow_gt, valid_gt = val_dataset[val_id]
         image1 = image1[None].cuda()
         image2 = image2[None].cuda()
@@ -187,7 +189,18 @@ def validate_middlebury(model, iters=32, split='F', mixed_prec=False):
         avg_epe_by_iter = [np.mean(epe_list) for epe_list in epe_by_iter]
         avg_d1_by_iter = [100 * np.mean(d1_list) for d1_list in d1_by_iter]
 
-        print(f"Validation Middlebury{split}: EPE shape {avg_epe_by_iter}, D1 shape {avg_d1_by_iter}")
+        print(f"Validation Middlebury{split}: EPE {avg_epe_by_iter}, D1 {avg_d1_by_iter}")
+        epe_by_iter_2d.append(avg_epe_by_iter)
+        d1_by_iter_2d.append(avg_d1_by_iter)
+
+    np_epe = np.array(epe_by_iter_2d)  # shape(10, 32)
+    np_d1 = np.array(d1_by_iter_2d)  # shape(10, 32)
+
+    final_epe_by_iter = np.mean(np_epe, axis=0)
+    final_d1_by_iter = np.mean(np_d1, axis=0)
+
+    print(f"final EPE by iters: {final_epe_by_iter}")
+    print(f"final D1 by iters: {final_d1_by_iter}")
 
     return
 
