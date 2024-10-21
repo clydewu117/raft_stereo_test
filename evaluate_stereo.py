@@ -167,8 +167,8 @@ def validate_middlebury(model, iters=32, split='F', mixed_prec=False):
             flow_predictions = model(image1, image2, iters=iters, test_mode=False)
 
         for i, flow_pr in enumerate(flow_predictions):  # iterate over flow_predictions (1 per iteration)
-            assert flow_pr.shape == flow_gt.shape, (flow_pr.shape, flow_gt.shape)
             flow_pr = padder.unpad(flow_pr).cpu().squeeze(0)
+            assert flow_pr.shape == flow_gt.shape, (flow_pr.shape, flow_gt.shape)
             epe = torch.sum((flow_pr - flow_gt) ** 2, dim=0).sqrt()  # calculate EPE
 
             epe_flattened = epe.flatten()
