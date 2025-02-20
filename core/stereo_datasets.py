@@ -266,8 +266,8 @@ class OSU(StereoDataset):
         image2_list_unsorted = glob(os.path.join(root, 'cam2_img/*.png'))
         disp_list_unsorted = glob(os.path.join(root, 'cam3_depth/*.png'))
 
-        image1_list = sorted(image1_list_unsorted, key=lambda x: int(os.path.splitext(x)[0]))
-        image2_list = sorted(image2_list_unsorted, key=lambda x: int(os.path.splitext(x)[0]))
+        image1_list = sorted(image1_list_unsorted, key=lambda x: int(os.path.splitext(os.path.basename(x))[0]))
+        image2_list = sorted(image2_list_unsorted, key=lambda x: int(os.path.splitext(os.path.basename(x))[0]))
         disp_list = sorted(disp_list_unsorted,
                            key=lambda x: int(os.path.splitext(os.path.basename(x))[0].split('_')[0]))
 
