@@ -115,37 +115,41 @@ def validate_osu(model, iters=32, mixed_prec=False):
     torch.backends.cudnn.benchmark = True
 
     out_list, epe_list, elapsed_list = [], [], []
-    for val_id in range(len(val_dataset)):
-        _, image1, image2, flow_gt, valid_gt = val_dataset[val_id]
-        image1 = image1[None].cuda()
-        image2 = image2[None].cuda()
+    with torch.no_grad():
+        for val_id in range(len(val_dataset)):
+            _, image1, image2, flow_gt, valid_gt = val_dataset[val_id]
+            image1 = image1[None].cuda()
+            image2 = image2[None].cuda()
 
-        padder = InputPadder(image1.shape, divis_by=32)
-        image1, image2 = padder.pad(image1, image2)
+            padder = InputPadder(image1.shape, divis_by=32)
+            image1, image2 = padder.pad(image1, image2)
 
-        with autocast(enabled=mixed_prec):
-            start = time.time()
-            _, flow_pr = model(image1, image2, iters=iters, test_mode=True)
-            end = time.time()
+            with autocast(enabled=mixed_prec):
+                start = time.time()
+                _, flow_pr = model(image1, image2, iters=iters, test_mode=True)
+                end = time.time()
 
-        if val_id > 50:
-            elapsed_list.append(end - start)
-        flow_pr = padder.unpad(flow_pr).cpu().squeeze(0)
+            if val_id > 50:
+                elapsed_list.append(end - start)
+            flow_pr = padder.unpad(flow_pr).cpu().squeeze(0)
 
-        assert flow_pr.shape == flow_gt.shape, (flow_pr.shape, flow_gt.shape)
-        epe = torch.sum((flow_pr - flow_gt) ** 2, dim=0).sqrt()
+            assert flow_pr.shape == flow_gt.shape, (flow_pr.shape, flow_gt.shape)
+            epe = torch.sum((flow_pr - flow_gt) ** 2, dim=0).sqrt()
 
-        epe_flattened = epe.flatten()
-        val = valid_gt.flatten() >= 0.5
+            epe_flattened = epe.flatten()
+            val = valid_gt.flatten() >= 0.5
 
-        out = (epe_flattened > 3.0)
-        image_out = out[val].float().mean().item()
-        image_epe = epe_flattened[val].mean().item()
-        if val_id < 9 or (val_id + 1) % 10 == 0:
-            logging.info(
-                f"OSU Iter {val_id + 1} out of {len(val_dataset)}. EPE {round(image_epe, 4)} D1 {round(image_out, 4)}. Runtime: {format(end - start, '.3f')}s ({format(1 / (end - start), '.2f')}-FPS)")
-        epe_list.append(epe_flattened[val].mean().item())
-        out_list.append(out[val].cpu().numpy())
+            out = (epe_flattened > 3.0)
+            image_out = out[val].float().mean().item()
+            image_epe = epe_flattened[val].mean().item()
+            if val_id < 9 or (val_id + 1) % 10 == 0:
+                logging.info(
+                    f"OSU Iter {val_id + 1} out of {len(val_dataset)}. EPE {round(image_epe, 4)} D1 {round(image_out, 4)}. Runtime: {format(end - start, '.3f')}s ({format(1 / (end - start), '.2f')}-FPS)")
+            epe_list.append(epe_flattened[val].mean().item())
+            out_list.append(out[val].cpu().numpy())
+
+            del image1, image2, flow_gt, valid_gt, flow_pr, epe
+            torch.cuda.empty_cache()
 
     epe_list = np.array(epe_list)
     out_list = np.concatenate(out_list)
