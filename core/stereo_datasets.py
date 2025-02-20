@@ -257,6 +257,25 @@ class KITTI(StereoDataset):
             self.disparity_list += [ disp ]
 
 
+class OSU(StereoDataset):
+    def __init__(self, aug_params=None, root='datasets/OSU', image_set='training'):
+        super(OSU, self).__init__(aug_params, sparse=True, reader=frame_utils.readDispKITTI)
+        assert os.path.exists(root)
+
+        image1_list_unsorted = glob(os.path.join(root, 'cam3_img/*.png'))
+        image2_list_unsorted = glob(os.path.join(root, 'cam2_img/*.png'))
+        disp_list_unsorted = glob(os.path.join(root, 'cam3_depth/*.png'))
+
+        image1_list = sorted(image1_list_unsorted, key=lambda x: int(os.path.splitext(x)[0]))
+        image2_list = sorted(image2_list_unsorted, key=lambda x: int(os.path.splitext(x)[0]))
+        disp_list = sorted(disp_list_unsorted,
+                           key=lambda x: int(os.path.splitext(os.path.basename(x))[0].split('_')[0]))
+
+        for idx, (img1, img2, disp) in enumerate(zip(image1_list, image2_list, disp_list)):
+            self.image_list += [ [img1, img2] ]
+            self.disparity_list += [ disp ]
+
+
 class Middlebury(StereoDataset):
     def __init__(self, aug_params=None, root='datasets/Middlebury', split='F'):
         super(Middlebury, self).__init__(aug_params, sparse=True, reader=frame_utils.readDispMiddlebury)

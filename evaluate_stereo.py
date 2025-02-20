@@ -108,6 +108,57 @@ def validate_kitti(model, iters=32, mixed_prec=False):
     return {'kitti-epe': epe, 'kitti-d1': d1}
 
 
+def validate_osu(model, iters=32, mixed_prec=False):
+    model.eval()
+    aug_params = {}
+    val_dataset = datasets.OSU(aug_params, image_set='training')
+    torch.backends.cudnn.benchmark = True
+
+    out_list, epe_list, elapsed_list = [], [], []
+    for val_id in range(len(val_dataset)):
+        _, image1, image2, flow_gt, valid_gt = val_dataset[val_id]
+        image1 = image1[None].cuda()
+        image2 = image2[None].cuda()
+
+        padder = InputPadder(image1.shape, divis_by=32)
+        image1, image2 = padder.pad(image1, image2)
+
+        with autocast(enabled=mixed_prec):
+            start = time.time()
+            _, flow_pr = model(image1, image2, iters=iters, test_mode=True)
+            end = time.time()
+
+        if val_id > 50:
+            elapsed_list.append(end - start)
+        flow_pr = padder.unpad(flow_pr).cpu().squeeze(0)
+
+        assert flow_pr.shape == flow_gt.shape, (flow_pr.shape, flow_gt.shape)
+        epe = torch.sum((flow_pr - flow_gt) ** 2, dim=0).sqrt()
+
+        epe_flattened = epe.flatten()
+        val = valid_gt.flatten() >= 0.5
+
+        out = (epe_flattened > 3.0)
+        image_out = out[val].float().mean().item()
+        image_epe = epe_flattened[val].mean().item()
+        if val_id < 9 or (val_id + 1) % 10 == 0:
+            logging.info(
+                f"OSU Iter {val_id + 1} out of {len(val_dataset)}. EPE {round(image_epe, 4)} D1 {round(image_out, 4)}. Runtime: {format(end - start, '.3f')}s ({format(1 / (end - start), '.2f')}-FPS)")
+        epe_list.append(epe_flattened[val].mean().item())
+        out_list.append(out[val].cpu().numpy())
+
+    epe_list = np.array(epe_list)
+    out_list = np.concatenate(out_list)
+
+    epe = np.mean(epe_list)
+    d1 = 100 * np.mean(out_list)
+
+    avg_runtime = np.mean(elapsed_list)
+
+    print(f"Validation OSU: EPE {epe}, D1 {d1}, {format(1 / avg_runtime, '.2f')}-FPS ({format(avg_runtime, '.3f')}s)")
+    return {'osu-epe': epe, 'osu-d1': d1}
+
+
 @torch.no_grad()
 def validate_things(model, iters=32, mixed_prec=False):
     """ Peform validation using the FlyingThings3D (TEST) split """
@@ -208,7 +259,7 @@ def validate_middlebury(model, iters=32, split='F', mixed_prec=False):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--restore_ckpt', help="restore checkpoint", default=None)
-    parser.add_argument('--dataset', help="dataset for evaluation", required=True, choices=["eth3d", "kitti", "things"] + [f"middlebury_{s}" for s in 'FHQ'])
+    parser.add_argument('--dataset', help="dataset for evaluation", required=True, choices=["eth3d", "kitti", "osu", "things"] + [f"middlebury_{s}" for s in 'FHQ'])
     parser.add_argument('--mixed_precision', action='store_true', help='use mixed precision')
     parser.add_argument('--valid_iters', type=int, default=32, help='number of flow-field updates during forward pass')
 
@@ -251,6 +302,9 @@ if __name__ == '__main__':
 
     elif args.dataset == 'kitti':
         validate_kitti(model, iters=args.valid_iters, mixed_prec=use_mixed_precision)
+
+    elif args.dataset == 'OSU':
+        validate_osu(model, iters=args.valid_iters, mixed_prec=use_mixed_precision)
 
     elif args.dataset in [f"middlebury_{s}" for s in 'FHQ']:
         validate_middlebury(model, iters=args.valid_iters, split=args.dataset[-1], mixed_prec=use_mixed_precision)
