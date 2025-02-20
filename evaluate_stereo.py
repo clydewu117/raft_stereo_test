@@ -303,7 +303,7 @@ if __name__ == '__main__':
     elif args.dataset == 'kitti':
         validate_kitti(model, iters=args.valid_iters, mixed_prec=use_mixed_precision)
 
-    elif args.dataset == 'OSU':
+    elif args.dataset == 'osu':
         validate_osu(model, iters=args.valid_iters, mixed_prec=use_mixed_precision)
 
     elif args.dataset in [f"middlebury_{s}" for s in 'FHQ']:
