@@ -128,7 +128,7 @@ def validate_osu(model, iters=32, mixed_prec=False):
 
             with autocast(enabled=mixed_prec):
                 start = time.time()
-                _, flow_pr = model(image1, image2, iters=iters, test_mode=True)
+                _, flow_pr = model(image1, image2, iters=16, test_mode=True)
                 end = time.time()
 
             if val_id > 50:
