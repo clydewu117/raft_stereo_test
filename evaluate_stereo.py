@@ -109,6 +109,8 @@ def validate_kitti(model, iters=32, mixed_prec=False):
 
 
 def validate_osu(model, iters=32, mixed_prec=False):
+    model = torch.nn.DataParallel(model, device_ids=[0, 1, 2, 3])
+    model.cuda()
     model.eval()
     aug_params = {}
     val_dataset = datasets.OSU(aug_params, image_set='training')
