@@ -12,6 +12,9 @@ from raft_stereo import RAFTStereo, autocast
 import stereo_datasets as datasets
 from utils.utils import InputPadder
 
+import torch.distributed as dist
+from torch.nn.parallel import DistributedDataParallel as DDP
+
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
@@ -279,8 +282,13 @@ if __name__ == '__main__':
     parser.add_argument('--n_gru_layers', type=int, default=3, help="number of hidden GRU levels")
     args = parser.parse_args()
 
-    model = RAFTStereo(args).cuda()
-    model = torch.nn.DataParallel(model, device_ids=[0, 1, 2, 3])
+    dist.init_process_group(backend="nccl")
+
+    local_rank = torch.distributed.get_rank()
+    torch.cuda.set_device(local_rank)
+
+    model = RAFTStereo(args).to(local_rank)
+    model = DDP(model, device_ids=[local_rank], output_device=local_rank)
 
     logging.basicConfig(level=logging.INFO,
                         format='%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s')
@@ -292,6 +300,7 @@ if __name__ == '__main__':
         model.load_state_dict(checkpoint, strict=True)
         logging.info(f"Done loading checkpoint")
 
+    model.cuda()
     model.eval()
 
     print(f"The model has {format(count_parameters(model)/1e6, '.2f')}M learnable parameters.")
