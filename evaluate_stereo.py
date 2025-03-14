@@ -118,6 +118,7 @@ def validate_osu(model, iters=32, mixed_prec=False):
     with torch.no_grad():
         for val_id in range(len(val_dataset)):
             _, image1, image2, flow_gt, valid_gt = val_dataset[val_id]
+            print(image1.shape, image2.shape)
             image1 = image1[None].cuda()
             image2 = image2[None].cuda()
 
