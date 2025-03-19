@@ -280,7 +280,7 @@ if __name__ == '__main__':
     parser.add_argument('--n_gru_layers', type=int, default=3, help="number of hidden GRU levels")
     args = parser.parse_args()
 
-    model = torch.nn.DataParallel(RAFTStereo(args), device_ids=[0])
+    model = torch.nn.DataParallel(RAFTStereo(args), device_ids=[1])
 
     logging.basicConfig(level=logging.INFO,
                         format='%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s')
