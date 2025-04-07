@@ -62,6 +62,7 @@ class StereoDataset(data.Dataset):
 
         index = index % len(self.image_list)
         disp = self.disparity_reader(self.disparity_list[index])
+        disp = np.array(disp)
         if isinstance(disp, tuple):
             disp, valid = disp
         else:
