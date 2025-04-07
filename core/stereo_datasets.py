@@ -196,6 +196,18 @@ class ETH3D(StereoDataset):
             self.image_list += [ [img1, img2] ]
             self.disparity_list += [ disp ]
 
+class Argoverse(StereoDataset):
+    def __init__(self, aug_params=None, root='datasets/argoverse', split='training'):
+        super(Argoverse, self).__init__(aug_params, sparse=True)
+
+        image1_list = sorted( glob(osp.join(root, 'rectified_stereo_images_v1.1/val/*/stereo_front_left_rect/*.jpg')) )
+        image2_list = sorted( glob(osp.join(root, 'rectified_stereo_images_v1.1/val/*/stereo_front_right_rect/*.jpg')) )
+        disp_list = sorted( glob(osp.join(root, 'disparity_maps_v1.1/val/*/stereo_front_left_rect_disparity/*.png')) )
+
+        for img1, img2, disp in zip(image1_list, image2_list, disp_list):
+            self.image_list += [ [img1, img2] ]
+            self.disparity_list += [ disp ]
+
 class SintelStereo(StereoDataset):
     def __init__(self, aug_params=None, root='datasets/SintelStereo'):
         super().__init__(aug_params, sparse=True, reader=frame_utils.readDispSintelStereo)
