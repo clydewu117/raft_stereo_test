@@ -63,7 +63,7 @@ def validate_argoverse(model, iters=32, mixed_prec=False):
     """ Peform validation using the argoverse """
     model.eval()
     aug_params = {}
-    val_dataset = datasets.argoverse(aug_params)
+    val_dataset = datasets.Argoverse(aug_params)
 
     out_list, epe_list = [], []
     for val_id in range(len(val_dataset)):
